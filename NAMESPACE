@@ -2,6 +2,9 @@
 
 export(shinytheme)
 export(themeSelector)
+export(cookieHelper)
+export(themeSetter)
+export(themeChooser)
 importFrom(shiny,div)
 importFrom(shiny,selectInput)
 importFrom(shiny,tags)
