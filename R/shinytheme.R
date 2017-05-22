@@ -36,97 +36,30 @@ allThemes <- function() {
   sub(".min.css", "", themes)
 }
 
-#' Add a theme selector widget in a floating panel
-#'
-#' This adds a widget for selecting the theme, in a floating panel. It is meant
-#' for use during the development phase of a Shiny application.
-#'
-#' This can be inserted anywhere inside of the application, although if it is
-#' put inside a tab, it will be visible only when that tab is showing. For it to
-#' show at all times, it must be used outside a tab.
-#'
-#' @examples
-#'
-#' if (interactive()) {
-#' # themeSelector can be inserted anywhere in the app.
-#' shinyApp(
-#'   ui = fluidPage(
-#'     shinythemes::themeSelector(),
-#'     sidebarPanel(
-#'       textInput("txt", "Text input:", "text here"),
-#'       sliderInput("slider", "Slider input:", 1, 100, 30),
-#'       actionButton("action", "Button"),
-#'       actionButton("action2", "Button2", class = "btn-primary")
-#'     ),
-#'     mainPanel(
-#'       tabsetPanel(
-#'         tabPanel("Tab 1"),
-#'         tabPanel("Tab 2")
-#'       )
-#'     )
-#'   ),
-#'   server = function(input, output) {}
-#' )
-#'
-#'
-#' # If this is used with a navbarPage() or other type of page where there is not a
-#' # good place to put it where it is outside of all tabs, you can wrap the entire
-#' # page in tagList() and make the themeSelector a sibling of the page.
-#' shinyApp(
-#'   ui = tagList(
-#'     shinythemes::themeSelector(),
-#'     navbarPage(
-#'       "Theme test",
-#'       tabPanel("Navbar 1",
-#'         sidebarPanel(
-#'           textInput("txt", "Text input:", "text here"),
-#'           sliderInput("slider", "Slider input:", 1, 100, 30),
-#'           actionButton("action", "Button"),
-#'           actionButton("action2", "Button2", class = "btn-primary")
-#'         ),
-#'         mainPanel(
-#'           tabsetPanel(
-#'             tabPanel("Tab 1"),
-#'             tabPanel("Tab 2")
-#'           )
-#'         )
-#'       ),
-#'       tabPanel("Navbar 2")
-#'     )
-#'   ),
-#'   server = function(input, output) {}
-#' )
-#' }
-#' @importFrom shiny div tags selectInput
+#' Slightly modified version of the theme setter functionaliity from
+#' the original forked package. Same base code, but without the forced style for
+#' the chooser, in order to allow people to inline code like any other UI gadget.
 #' @export
 themeSelector <- function() {
-  shiny::fixedPanel(
-    top = "15px",
-    right = "15px",
-    draggable = TRUE,
-    style = "width: 250px; z-index: 100000;",
-    div(class = "panel panel-danger",
-      style = "box-shadow: 5px 5px 15px -5px rgba(0, 0, 0, 0.3);",
-      div(class = "panel-heading", "Select theme:"),
-      div(class = "panel-body",
-        selectInput("shinytheme-selector", NULL,
+  div(
+    selectInput("shinytheme-selector", NULL,
           c("default", allThemes()),
           selectize = FALSE
-        )
-      )
-    ),
+        ),
     tags$script(
 "$('#shinytheme-selector')
   .on('change', function(el) {
     var allThemes = $(this).find('option').map(function() {
       if ($(this).val() === 'default')
         return 'bootstrap';
-      else
+      else {
         return $(this).val();
+      }
     });
 
     // Find the current theme
     var curTheme = el.target.value;
+    Cookies.set('theme',curTheme);
     if (curTheme === 'default') {
       curTheme = 'bootstrap';
       curThemePath = 'shared/bootstrap/css/bootstrap.min.css';
@@ -155,78 +88,18 @@ themeSelector <- function() {
 #' the theme system to work.
 #' @export
 cookieHelper <- function(){
-  shiny::tags$head(shiny::tags$script("shinythemes/js/js.cookie.js"))
+  shiny::tags$head(shiny::tags$script(src = "shinythemes/js/js.cookie.js"))
 }
-#' Slightly modified version of the theme setter functionaliity from
-#' the original forked package. This script manage the saving functionality
-#' of the program itself.
+#' Cookie saver manager. Include this on the head of the document to allow to load
+#' and save the last known state of the theme; after cookieHelper, which is a dependency
 #' @export
-themeSetter <- function(){
-  shiny::tags$head(shiny::tags$script(text = "
-                                      SetTheme = function() {
-                                      return {
-                                      get: function(name) {
-                                      return Cookies.get(name);
-                                      },
-                                      set: function(name, value, attributes) {
-                                      Cookies.set(name, value, attributes);
-                                      },
-                                      remove: function(name, attributes) {
-                                      Cookies.remove(name, attributes);
-                                      }
-                                      };
-                                      };
-                                      selectedTheme = SetTheme.get('themeSet');
-                                      if (!selectedTheme == undefined){
-                                      applyTheme ('default');
-                                      }
-                                      else{
-                                      applyTheme (selectedTheme);
-                                      }
-
-                                      applyTheme = function(curTheme) {
-                                      if (curTheme === 'default') {
-                                      curTheme = 'bootstrap';
-                                      curThemePath = 'shared/bootstrap/css/bootstrap.min.css';
-                                      } else {
-                                      curThemePath = 'shinythemes/css/' + curTheme + '.min.css';
-                                      }
-
-                                      // Find the <link> element with that has the bootstrap.css
-                                      var $link = $('link').filter(function() {
-                                      var theme = $(this).attr('href');
-                                      theme = theme.replace(/^.*\\//, '').replace(/(\\.min)?\\.css$/, '');
-                                      return $.inArray(theme, allThemes) !== -1;
-                                      });
-
-                                      // Set it to the correct path
-                                      $link.attr('href', curThemePath);
-                                      });"
-))
-}
-#' Slightly modified version of the theme setter functionaliity from
-#' the original forked package. Same base code, but without the forced style for
-#' the chooser, in order to allow people to inline code like any other UI gadget.
-#' @export
-themeChooser <- function() {
-  shiny::selectInput("shinytheme-chooser", NULL,
-                        c("default", allThemes()),
-                        selectize = FALSE,
-                        tags$script(
-                          "$('#shinytheme-chooser').on('change', function(el) {
-                            var allThemes = $(this).find('option').map(function() {
-                              if ($(this).val() === 'default')
-                                return 'bootstrap';
-                              else
-                                return $(this).val();
-                              });
-
-                            // Find the current theme
-                            var curTheme = el.target.value;
-                            SetTheme.set('themeSet',curTheme);
-                            applyTheme(curTheme);
-                            }
-                            "
-    )
-  )
+cookieSaver <- function(){
+  shiny::tags$head(shiny::tags$script("
+$(document).on('shiny:connected', function(event) {
+                                      selectedTheme = Cookies.get('theme');
+                                      if (!(selectedTheme == undefined)){
+                                      $('#shinytheme-selector').val(selectedTheme);
+                                      $('#shinytheme-selector').change();
+                                      }});
+                                      "))
 }
